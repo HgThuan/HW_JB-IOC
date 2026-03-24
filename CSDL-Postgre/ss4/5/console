@@ -1,0 +1,51 @@
+CREATE TABLE Employees (
+                           id INT PRIMARY KEY,
+                           full_name VARCHAR(255),
+                           department VARCHAR(100),
+                           position VARCHAR(100),
+                           salary DECIMAL(18, 2),
+                           bonus DECIMAL(18, 2) NULL,
+                           join_year INT
+);
+
+INSERT INTO Employees (id, full_name, department, position, salary, bonus, join_year)
+VALUES
+    (1, N'Nguyễn Văn Huy', N'IT', N'Developer', 18000000, 1000000, 2021),
+    (2, N'Trần Thị Mai', N'HR', N'Recruiter', 12000000, NULL, 2020),
+    (3, N'Lê Quốc Trung', N'IT', N'Tester', 15000000, 800000, 2023),
+    (4, N'Nguyễn Văn Huy', N'IT', N'Developer', 18000000, 1000000, 2021),
+    (5, N'Phạm Ngọc Hân', N'Finance', N'Accountant', 14000000, NULL, 2019),
+    (6, N'Bùi Thị Lan', N'HR', N'HR Manager', 20000000, 3000000, 2018),
+    (7, N'Đặng Hữu Tài', N'IT', N'Developer', 17000000, NULL, 2022);
+
+--2.1:Tăng 10% lương cho những nhân viên làm trong phòng IT có mức lương dưới 18,000,000
+update Employees
+set salary=salary*1.1
+where salary < '18000000';
+
+--2.2: Với nhân viên có bonus IS NULL, đặt giá trị bonus = 500000
+update Employees
+set bonus = '500000'
+where bonus is null ;
+
+--3.1 :Hiển thị danh sách nhân viên thuộc phòng IT hoặc HR, gia nhập sau năm 2020, và có tổng thu nhập (salary + bonus) lớn hơn 15,000,000
+select*from Employees
+where (department='IT' or department ='HR') and (join_year >'2020') and (bonus+salary >15000000);
+
+--3.2: Chỉ lấy 3 nhân viên đầu tiên sau khi sắp xếp giảm dần theo tổng thu nhập
+select *from Employees
+order by salary DESC
+limit 3;
+
+--Tìm tất cả nhân viên có tên bắt đầu bằng “Nguyễn” hoặc kết thúc bằng “Hân”
+select full_name from Employees
+where (full_name like 'Nguyễn%') or (full_name like '%Hân');
+
+--Liệt kê các phòng ban duy nhất có ít nhất một nhân viên có bonus IS NOT NULL
+SELECT DISTINCT department
+FROM Employees
+WHERE bonus IS NOT NULL;
+
+--Hiển thị nhân viên gia nhập trong khoảng từ 2019 đến 2022 (BETWEEN)
+select *from Employees
+where join_year between '2019' and '2022';
