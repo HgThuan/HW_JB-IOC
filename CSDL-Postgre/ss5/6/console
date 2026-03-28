@@ -1,0 +1,79 @@
+create table departments(
+                            dept_id serial primary key,
+                            dept_name varchar(100)
+);
+create table employees(
+                          emp_id serial primary key,
+                          emp_name varchar(100),
+                          dept_id int,
+                          foreign key(dept_id) references departments(dept_id),
+                          salary numeric(10,2),
+                          hire_date date
+);
+create table projects(
+                         project_id serial primary key,
+                         project_name varchar(100),
+                         dept_id int,
+                         foreign key(dept_id) references departments(dept_id)
+);
+INSERT INTO departments (dept_name) VALUES
+                                        ('Phòng Công nghệ'),
+                                        ('Phòng Nhân sự'),
+                                        ('Phòng Marketing'),
+                                        ('Phòng Tài chính'),
+                                        ('Phòng Kinh doanh');
+INSERT INTO employees (emp_name, dept_id, salary, hire_date) VALUES
+                                                                 ('Nguyễn Chuông', 1, 2500.00, '2025-01-15'),
+                                                                 ('Trần Quoc Anh', 1, 2200.00, '2025-02-10'),
+                                                                 ('Lê Thị Bình', 2, 1800.00, '2024-11-20'),
+                                                                 ('Phạm Minh Đức', 3, 2000.00, '2025-03-01'),
+                                                                 ('Hoàng Thu Hà', 4, 2100.00, '2024-12-05');
+INSERT INTO projects (project_name, dept_id) VALUES
+                                                 ('Hệ thống Quản lý IoT', 1),
+                                                 ('Ứng dụng Web MemePicker', 1),
+                                                 ('Chiến dịch Tuyển dụng 2026', 2),
+                                                 ('Ra mắt Sản phẩm Mới', 3),
+                                                 ('Nâng cấp Bảo mật Mạng', 1);
+
+--1.
+select
+    e.emp_name,
+    d.dept_name,
+    e.salary
+from departments as d
+join employees e on d.dept_id = e.dept_id
+
+--2
+select
+    sum(salary) as "tong luong",
+    avg(salary) as "trung binh luong",
+    max(salary) as "luong cao nhat" ,
+    min(salary) as "luong thap nhat",
+    count(emp_id) as "so nv"
+from employees;
+--3
+select d.dept_name, avg(e.salary) as "avg_salary"
+from departments as d
+join employees e on d.dept_id = e.dept_id
+group by d.dept_name
+having avg(salary) >1500;
+--4
+select
+    p.project_name as "ten du an",
+    d.dept_name as "phong ban phu trach",
+    e.emp_name as "ten nhan vien"
+from projects p
+join employees e on p.dept_id = e.dept_id
+join departments d on d.dept_id = e.dept_id;
+
+--5
+select
+    emp_name,
+    dept_id,
+    salary
+from employees
+where (dept_id, salary) in (
+select dept_id, max(salary)
+from employees
+group by dept_id
+    );
