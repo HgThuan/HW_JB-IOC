@@ -1,0 +1,41 @@
+INSERT INTO Department (name) 
+VALUES 
+    ('IT'),           -- id sẽ tự động là 1
+    ('Nhân sự'),     
+    ('Kinh doanh'),   
+    ('Marketing');   
+INSERT INTO Employee (full_name, department_id, salary) 
+VALUES 
+    ('Nguyễn Văn A', 1, 15000000.00),  -- IT
+    ('Trần Thị B', 1, 12000000.00),  -- IT (Lương TB phòng IT: 13.5 triệu)
+    ('Lê Văn C', 2, 8000000.00),     -- Nhân sự
+    ('Phạm Thị D', 2, 9000000.00),     -- Nhân sự (Lương TB phòng Nhân sự: 8.5 triệu)
+    ('Hoàng Văn E', 3, 11000000.00), -- Kinh doanh
+    ('Đỗ Thị F', 3, 14000000.00);    -- Kinh doanh (Lương TB phòng KD: 12.5 triệu)
+--1
+SELECT 
+    e.full_name, 
+    d.name AS department_name
+FROM Employee e
+INNER JOIN Department d ON e.department_id = d.id;
+--2
+SELECT 
+    d.name AS department_name, 
+    AVG(e.salary) AS avg_salary
+FROM Department d
+JOIN Employee e ON d.id = e.department_id
+GROUP BY d.name;
+--3
+SELECT 
+    d.name AS department_name, 
+    AVG(e.salary) AS avg_salary
+FROM Department d
+JOIN Employee e ON d.id = e.department_id
+GROUP BY d.name
+HAVING AVG(e.salary) > 10000000;
+--4
+SELECT 
+    d.name AS department_name
+FROM Department d
+LEFT JOIN Employee e ON d.id = e.department_id
+WHERE e.id IS NULL;

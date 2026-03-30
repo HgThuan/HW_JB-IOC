@@ -1,0 +1,20 @@
+--1
+INSERT INTO Product (name, category, price, stock) 
+VALUES 
+    ('Điện thoại thông minh', 'Điện tử', 8500000.00, 50),
+    ('Laptop Gaming', 'Điện tử', 25000000.00, 15),
+    ('Tai nghe không dây', 'Điện tử', 1500000.00, 100),
+    ('Áo thun thể thao', 'Thời trang', 250000.00, 200),
+    ('Tủ lạnh Inverter', 'Gia dụng', 12000000.00, 8);
+--2
+SELECT * FROM Product;
+--3
+SELECT * FROM Product 
+ORDER BY price DESC 
+LIMIT 3;
+--4
+SELECT * FROM Product 
+WHERE category = 'Điện tử' AND price < 10000000;
+--5
+SELECT * FROM Product 
+ORDER BY stock ASC;

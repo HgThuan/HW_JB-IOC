@@ -1,0 +1,24 @@
+--1
+INSERT INTO Course (title, instructor, price, duration) 
+VALUES 
+    ('Khóa học SQL cơ bản', 'Nguyễn Văn A', 1500000.00, 40),
+    ('Lập trình Python Demo', 'Trần Thị B', 400000.00, 20),
+    ('Làm chủ PostgreSQL', 'Lê Văn C', 1800000.00, 35),
+    ('Khóa học Frontend', 'Phạm Thị D', 2500000.00, 50),
+    ('Data Analysis với sql', 'Hoàng Văn E', 1200000.00, 25),
+    ('Thiết kế UI/UX Demo', 'Đỗ Thị F', 800000.00, 15);
+--2
+UPDATE Course 
+SET price = price * 1.15 
+WHERE duration > 30;
+--3
+DELETE FROM Course 
+WHERE title LIKE '%Demo%';
+--4
+SELECT * FROM Course 
+WHERE title ILIKE '%SQL%';
+--5
+SELECT * FROM Course 
+WHERE price BETWEEN 500000 AND 2000000 
+ORDER BY price DESC 
+LIMIT 3;

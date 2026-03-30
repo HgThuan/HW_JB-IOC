@@ -1,0 +1,23 @@
+--1
+INSERT INTO Customer (name, email, phone, points) 
+VALUES 
+    ('Nguyễn Văn A', 'nva@example.com', '0901234567', 150),
+    ('Trần Thị B', 'ttb@example.com', '0912345678', 300),
+    ('Lê Văn C', 'lvc@example.com', '0923456789', 50),
+    ('Phạm Thị D', NULL, '0934567890', 450), -- Khách hàng không có email
+    ('Hoàng Văn E', 'hve@example.com', '0945678901', 120),
+    ('Đỗ Thị F', 'dtf@example.com', '0956789012', 500),
+    ('Nguyễn Văn A', 'nva2@example.com', '0967890123', 200); -- Trùng tên để test DISTINCT
+--2
+SELECT DISTINCT name 
+FROM Customer;
+--3
+SELECT * FROM Customer 
+WHERE email IS NULL;
+--4
+SELECT * FROM Customer 
+ORDER BY points DESC 
+LIMIT 3 OFFSET 1;
+--5
+SELECT * FROM Customer 
+ORDER BY name DESC;

@@ -1,0 +1,24 @@
+--1
+SELECT 
+    SUM(total_amount) AS total_revenue,
+    COUNT(id) AS total_orders,
+    AVG(total_amount) AS average_order_value
+FROM Orders;
+--2
+SELECT 
+    EXTRACT(YEAR FROM order_date) AS order_year,
+    SUM(total_amount) AS total_revenue
+FROM Orders
+GROUP BY EXTRACT(YEAR FROM order_date);
+--3
+SELECT 
+    EXTRACT(YEAR FROM order_date) AS order_year,
+    SUM(total_amount) AS total_revenue
+FROM Orders
+GROUP BY EXTRACT(YEAR FROM order_date)
+HAVING SUM(total_amount) > 50000000;
+--4
+SELECT * FROM Orders
+ORDER BY total_amount DESC
+LIMIT 5;
+

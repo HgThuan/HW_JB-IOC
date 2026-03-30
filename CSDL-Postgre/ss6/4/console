@@ -1,0 +1,21 @@
+--1
+INSERT INTO OrderInfo (customer_id, order_date, total, status) 
+VALUES 
+    (1, '2024-10-05', 750000.00, 'Pending'),
+    (2, '2024-09-15', 300000.00, 'Completed'),
+    (3, '2024-10-20', 1200000.00, 'Processing'),
+    (4, '2024-11-01', 450000.00, 'Completed'),
+    (5, '2024-10-31', 600000.00, 'Cancelled');
+--2
+SELECT * FROM OrderInfo 
+WHERE total > 500000;
+--3
+SELECT * FROM OrderInfo 
+WHERE order_date BETWEEN '2024-10-01' AND '2024-10-31';
+--4
+SELECT * FROM OrderInfo 
+WHERE status != 'Completed';
+--5
+SELECT * FROM OrderInfo 
+ORDER BY order_date DESC 
+LIMIT 2;

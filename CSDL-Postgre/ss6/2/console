@@ -1,0 +1,22 @@
+--1
+INSERT INTO Employee (full_name, department, salary, hire_date) 
+VALUES 
+    ('Nguyễn Văn An', 'IT', 15000000.00, '2023-05-15'),
+    ('Trần Thị Bình', 'Kế toán', 12000000.00, '2022-10-10'),
+    ('Lê Hoàng anh', 'Marketing', 5500000.00, '2024-01-20'),
+    ('Phạm Minh Tuấn', 'IT', 20000000.00, '2023-11-01'),
+    ('Hoàng Thị Lan', 'Nhân sự', 8000000.00, '2021-08-05'),
+    ('Đặng Vĩ Khang', 'Sales', 5000000.00, '2023-02-14');
+--2
+UPDATE Employee 
+SET salary = salary * 1.10 
+WHERE department = 'IT';
+--3
+DELETE FROM Employee 
+WHERE salary < 6000000;
+--4
+SELECT * FROM Employee 
+WHERE full_name ILIKE '%An%';
+--5
+SELECT * FROM Employee 
+WHERE hire_date BETWEEN '2023-01-01' AND '2023-12-31';
