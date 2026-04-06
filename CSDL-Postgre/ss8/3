@@ -1,0 +1,65 @@
+create table employees(
+    emp_id serial primary key ,
+    emp_name varchar(100),
+    job_level int,
+    salary numeric
+);
+
+INSERT INTO employees (emp_name, job_level, salary) VALUES
+                                                        ('Nguyen Van A', 1, 1000),
+                                                        ('Tran Thi B', 2, 2000),
+                                                        ('Le Van C', 3, 3000);
+
+CREATE OR REPLACE PROCEDURE adjust_salary(
+    p_emp_id INT,
+    OUT p_new_salary NUMERIC
+)
+    LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_current_salary NUMERIC;
+    v_level INT;
+    v_ratio NUMERIC := 0;
+BEGIN
+    -- 1. Lấy lương hiện tại và job_level của nhân viên
+    SELECT salary, job_level INTO v_current_salary, v_level
+    FROM employees
+    WHERE emp_id = p_emp_id;
+
+    -- Kiểm tra nếu nhân viên không tồn tại
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Employee with ID % not found', p_emp_id;
+    END IF;
+
+    -- 2. Xác định tỷ lệ tăng dựa trên job_level
+    CASE v_level
+        WHEN 1 THEN v_ratio := 0.05; -- Tăng 5%
+        WHEN 2 THEN v_ratio := 0.10; -- Tăng 10%
+        WHEN 3 THEN v_ratio := 0.15; -- Tăng 15%
+        ELSE v_ratio := 0;           -- Không tăng nếu level khác
+        END CASE;
+
+    -- 3. Tính toán lương mới
+    p_new_salary := v_current_salary * (1 + v_ratio);
+
+    -- 4. Cập nhật vào bảng
+    UPDATE employees
+    SET salary = p_new_salary
+    WHERE emp_id = p_emp_id;
+
+END;
+$$;
+
+--thực thi thử :
+CALL adjust_salary(3, NULL);
+
+DO $$
+    DECLARE
+        p_new_salary NUMERIC;
+    BEGIN
+        -- Gọi procedure và hứng kết quả vào biến
+        CALL adjust_salary(3, p_new_salary);
+
+        -- Thông báo kết quả (hoặc bạn có thể kiểm tra bảng sau đó)
+        RAISE NOTICE 'New Salary: %', p_new_salary;
+    END $$;

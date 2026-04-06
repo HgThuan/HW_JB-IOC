@@ -1,0 +1,57 @@
+CREATE TABLE employees ( id SERIAL PRIMARY KEY,
+                         name VARCHAR (100) NOT NULL,
+                         department VARCHAR (50),
+                         salary NUMERIC (10,2),
+                         bonus NUMERIC (10,2) DEFAULT '0'
+) ;
+
+INSERT INTO employees (name, department, salary) VALUES
+('Nguyen Van A', 'HR', '4000'),
+('Tran Thi B', 'IT', '6000'),
+('Le Van C', 'Finance','10500'),
+('Pham Thi D', 'IT', '8000'),
+('Do Van E', 'HR', '12000');
+
+ALTER TABLE employees ADD COLUMN status TEXT;
+
+--6
+create procedure calculate_bonus(
+    in p_id INT,
+    in p_percent NUMERIC,
+    out p_bonus NUMERIC(10,2)
+)
+language plpgsql
+as
+    $$
+DECLARE
+    v_exists BOOLEAN;
+    v_salary NUMERIC;
+    v_bonus NUMERIC := 0;
+BEGIN
+    -- 1. Kiểm tra nhân viên có tồn tại hay không
+    SELECT EXISTS(SELECT 1 FROM employees WHERE id = p_id) INTO v_exists;
+
+    IF NOT v_exists THEN
+        RAISE EXCEPTION 'Employee not found';
+    END IF;
+
+    -- 2. Kiểm tra điều kiện p_percent
+    IF p_percent > 0 THEN
+        -- Lấy lương của nhân viên để tính toán
+        SELECT salary INTO v_salary FROM employees WHERE id = p_id;
+
+        -- Công thức: Thưởng = salary * p_percent / 100
+        v_bonus := v_salary * p_percent / 100;
+    ELSE
+        -- Nếu p_percent <= 0, v_bonus đã được khởi tạo là 0
+        v_bonus := 0;
+    END IF;
+
+    -- 3. Cập nhật vào bảng employees
+    UPDATE employees
+    SET bonus = v_bonus
+    WHERE id = p_id;
+
+    COMMIT;
+END;
+    $$;

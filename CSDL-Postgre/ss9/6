@@ -1,0 +1,44 @@
+CREATE TABLE Products (
+    product_id SERIAL PRIMARY KEY,
+    name VARCHAR(100),
+    price NUMERIC(15, 2),
+    category_id INT
+);
+
+INSERT INTO Products (name, price, category_id) VALUES
+('Bàn làm việc', 1500.00, 1),
+('Ghế văn phòng', 800.00, 1),
+('Chuột máy tính', 200.00, 2),
+('Bàn phím cơ', 1200.00, 2);
+
+CREATE OR REPLACE PROCEDURE update_product_price(
+    p_category_id INT, 
+    p_increase_percent NUMERIC
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    -- Khai báo biến để chứa dữ liệu từng dòng trong vòng lặp
+    r_product RECORD;
+    v_new_price NUMERIC;
+BEGIN
+    -- Vòng lặp duyệt qua từng sản phẩm thuộc category_id truyền vào
+    FOR r_product IN (SELECT product_id, price FROM Products WHERE category_id = p_category_id) 
+    LOOP
+        -- Tính toán giá mới: Giá cũ + (Giá cũ * Phần trăm / 100)
+        v_new_price := r_product.price + (r_product.price * p_increase_percent / 100);
+        
+        -- Cập nhật giá mới cho sản phẩm hiện tại
+        UPDATE Products 
+        SET price = v_new_price 
+        WHERE product_id = r_product.product_id;
+        
+        -- (Tùy chọn) In thông báo để theo dõi quá trình
+        RAISE NOTICE 'Sản phẩm ID %: Giá cũ % -> Giá mới %', r_product.product_id, r_product.price, v_new_price;
+    END LOOP;
+END;
+$$;
+
+CALL update_product_price(1, 10);
+
+SELECT * FROM Products WHERE category_id = 1;

@@ -1,0 +1,52 @@
+create table products(
+    id serial primary key ,
+    name varchar(100),
+    price numeric,
+    discount_percent int
+);
+
+INSERT INTO products (name, price, discount_percent) VALUES
+                                                         ('Laptop Gaming', 20000000, 10),
+                                                         ('Chuột không dây', 500000, 60), -- Trường hợp giảm quá 50%
+                                                         ('Bàn phím cơ', 1200000, 25),
+                                                         ('Tai nghe', 800000, 0);
+
+CREATE OR REPLACE PROCEDURE calculate_discount(
+    p_id INT,
+    OUT p_final_price NUMERIC
+)
+    LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_price NUMERIC;
+    v_discount INT;
+BEGIN
+    -- 1. Lấy thông tin price và discount_percent của sản phẩm
+    SELECT price, discount_percent
+    INTO v_price, v_discount
+    FROM products
+    WHERE id = p_id;
+
+    -- Kiểm tra nếu không tìm thấy sản phẩm
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Product with ID % not found', p_id;
+    END IF;
+
+    -- 2. Logic giới hạn giảm giá tối đa 50%
+    IF v_discount > 50 THEN
+        v_discount := 50;
+    END IF;
+
+    -- 3. Tính giá sau giảm
+    -- Công thức: p_final_price = price - (price * discount_percent / 100)
+    p_final_price := v_price - (v_price * v_discount / 100);
+
+    -- 4. Cập nhật lại cột price trong bảng products
+    UPDATE products
+    SET price = p_final_price
+    WHERE id = p_id;
+
+END;
+$$;
+
+call calculate_discount(2,p_final_price :=500000)

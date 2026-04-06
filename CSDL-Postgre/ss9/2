@@ -1,0 +1,18 @@
+CREATE TABLE Users (
+    user_id SERIAL PRIMARY KEY,
+    email VARCHAR(255) NOT NULL,
+    username VARCHAR(100)
+);
+
+-- Chèn dữ liệu mẫu
+INSERT INTO Users (email, username) VALUES
+('admin@example.com', 'admin'),
+('user1@gmail.com', 'nguyenvana'),
+('example@example.com', 'test_user'),
+('dev@company.org', 'developer');
+
+CREATE INDEX idx_users_email_hash ON Users USING HASH (email);
+
+EXPLAIN ANALYZE 
+SELECT * FROM Users WHERE email = 'example@example.com';
+

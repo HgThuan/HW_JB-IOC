@@ -1,0 +1,21 @@
+CREATE TABLE Orders (
+    order_id SERIAL PRIMARY KEY,
+    customer_id INT NOT NULL,
+    order_date DATE DEFAULT CURRENT_DATE,
+    total_amount NUMERIC(12, 2)
+);
+
+-- Chèn 1 triệu dòng dữ liệu mẫu ngẫu nhiên
+INSERT INTO Orders (customer_id, order_date, total_amount)
+SELECT 
+    floor(random() * 100000 + 1)::int, -- 100,000 khách hàng khác nhau
+    generate_series('2023-01-01'::date, '2023-12-31'::date, '1 minute'::interval),
+    (random() * 1000)::numeric(12,2);
+
+EXPLAIN ANALYZE 
+SELECT * FROM Orders WHERE customer_id = 54321;
+
+CREATE INDEX idx_orders_customer_id ON Orders(customer_id);
+
+EXPLAIN ANALYZE 
+SELECT * FROM Orders WHERE customer_id = 54321;

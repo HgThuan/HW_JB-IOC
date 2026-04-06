@@ -1,0 +1,55 @@
+CREATE TABLE employees ( id SERIAL PRIMARY KEY,
+                         name VARCHAR (100) NOT NULL,
+                         department VARCHAR (50),
+                         salary NUMERIC (10,2),
+                         bonus NUMERIC (10,2) DEFAULT '0'
+) ;
+
+INSERT INTO employees (name, department, salary) VALUES
+('Nguyen Van A', 'HR', '4000'),
+('Tran Thi B', 'IT', '6000'),
+('Le Van C', 'Finance','10500'),
+('Pham Thi D', 'IT', '8000'),
+('Do Van E', 'HR', '12000');
+
+ALTER TABLE employees ADD COLUMN status TEXT;
+
+--5
+create procedure update_employee_status(
+    in p_emp_id int,
+    out p_status TEXT
+)
+language plpgsql
+as
+$$
+declare v_salary numeric(10,2);
+    begin
+        select e.salary into v_salary from employees e
+        where e.id=p_emp_id;
+        if not FOUND then
+        raise exception 'Employee not found';
+        end if;
+        if v_salary <5000 then
+            p_status := 'Junior';
+        end if;
+        if  v_salary between 5000 and 1000 then
+            p_status := 'Middle';
+        end if;
+        if v_salary >10000 then
+            p_status := 'senior';
+        end if;
+        update employees e
+    set status=p_status
+    where id=p_emp_id;
+    end;
+$$;
+
+DO $$
+    DECLARE
+        v_out_status TEXT;
+    BEGIN
+        -- Gọi procedure cho nhân viên có ID là 1
+        CALL update_employee_status(1, v_out_status);
+        RAISE NOTICE 'Trạng thái mới: %', v_out_status;
+    END $$;
+

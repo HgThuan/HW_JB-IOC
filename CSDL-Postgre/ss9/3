@@ -1,0 +1,22 @@
+CREATE TABLE Products (
+    product_id INT PRIMARY KEY, -- Mặc định là Clustered Index trong SQL Server
+    category_id INT,
+    price NUMERIC(10, 2),
+    stock_quantity INT
+);
+
+INSERT INTO Products (product_id, category_id, price, stock_quantity) VALUES
+(1, 10, 500.00, 50),
+(2, 20, 150.00, 100),
+(3, 10, 200.00, 30),
+(4, 10, 1200.00, 10),
+(5, 20, 80.00, 200);
+
+-- Xóa ràng buộc PK cũ nếu cần để chỉ định lại Clustered Index
+CREATE CLUSTERED INDEX idx_products_category_id ON Products(category_id);
+
+CREATE NONCLUSTERED INDEX idx_products_price ON Products(price);
+
+SELECT * FROM Products 
+WHERE category_id = 10 
+ORDER BY price;
