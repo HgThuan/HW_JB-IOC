@@ -1,0 +1,30 @@
+create table products(
+    id serial primary key,
+    name varchar(100),
+    price numeric(10,2),
+    last_modified timestamp default CURRENT_TIMESTAMP
+);
+
+drop table products;
+insert into products(name, price, last_modified) VALUES
+                                                     ('ban phim','200','2026-10-2'),
+                                                     ('man hinh','300','2026-10-26'),
+                                                     ('ram','240','2026-5-9'),
+                                                     ('cpu','400','2026-1-3'),
+                                                     ('tai nghe','210','2024-5-2');
+
+create or replace function update_last_modified()
+    returns trigger
+as
+    $$
+    begin
+        new.last_modified = current_timestamp;
+        return new;
+    end;
+    $$language plpgsql;
+
+create trigger trg_update_last_modified
+    before update on products
+    for each row
+    execute function update_last_modified();
+

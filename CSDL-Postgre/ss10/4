@@ -1,0 +1,70 @@
+-- Tạo bảng sản phẩm
+CREATE TABLE products (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    stock INT NOT NULL DEFAULT 0
+);
+
+-- Tạo bảng đơn hàng
+CREATE TABLE orders (
+    id SERIAL PRIMARY KEY,
+    product_id INT REFERENCES products(id),
+    quantity INT NOT NULL CHECK (quantity > 0)
+);
+
+-- Thêm dữ liệu mẫu
+INSERT INTO products (name, stock) VALUES ('Bàn phím cơ', 50), ('Chuột không dây', 30);
+
+
+CREATE OR REPLACE FUNCTION sync_product_stock()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- 1. Khi thêm đơn hàng mới: Trừ kho
+    IF (TG_OP = 'INSERT') THEN
+        UPDATE products 
+        SET stock = stock - NEW.quantity 
+        WHERE id = NEW.product_id;
+        RETURN NEW;
+
+    -- 2. Khi chỉnh sửa đơn hàng: Tính toán chênh lệch
+    ELSIF (TG_OP = 'UPDATE') THEN
+        -- stock = stock - (số lượng mới - số lượng cũ)
+        UPDATE products 
+        SET stock = stock - (NEW.quantity - OLD.quantity) 
+        WHERE id = NEW.product_id;
+        RETURN NEW;
+
+    -- 3. Khi xóa đơn hàng: Cộng lại vào kho
+    ELSIF (TG_OP = 'DELETE') THEN
+        UPDATE products 
+        SET stock = stock + OLD.quantity 
+        WHERE id = OLD.product_id;
+        RETURN OLD;
+    END IF;
+    
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_manage_stock
+AFTER INSERT OR UPDATE OR DELETE ON orders
+FOR EACH ROW
+EXECUTE FUNCTION sync_product_stock();
+
+-- Mua 10 Bàn phím cơ (id=1)
+INSERT INTO orders (product_id, quantity) VALUES (1, 10);
+
+-- Kiểm tra: stock của sản phẩm 1 sẽ là 40 (50 - 10)
+SELECT * FROM products WHERE id = 1;
+
+-- Sửa đơn hàng từ 10 thành 15 (mua thêm 5 cái nữa)
+UPDATE orders SET quantity = 15 WHERE id = 1;
+
+-- Kiểm tra: stock của sản phẩm 1 sẽ là 35 (40 - 5)
+SELECT * FROM products WHERE id = 1;
+
+-- Xóa đơn hàng vừa tạo
+DELETE FROM orders WHERE id = 1;
+
+-- Kiểm tra: stock của sản phẩm 1 sẽ quay về 50 như ban đầu
+SELECT * FROM products WHERE id = 1;
