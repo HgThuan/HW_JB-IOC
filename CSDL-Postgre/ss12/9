@@ -1,0 +1,63 @@
+CREATE TABLE customers (
+    customer_id SERIAL PRIMARY KEY,
+    name VARCHAR(50) NOT NULL,
+    email VARCHAR(50)
+);
+
+CREATE TABLE products (
+    product_id SERIAL PRIMARY KEY,
+    name VARCHAR(50) NOT NULL,
+    price NUMERIC(10,2) NOT NULL,
+    stock INT NOT NULL
+);
+
+CREATE TABLE orders (
+    order_id SERIAL PRIMARY KEY,
+    customer_id INT REFERENCES customers(customer_id),
+    product_id INT REFERENCES products(product_id),
+    quantity INT NOT NULL,
+    total_amount NUMERIC(12,2),
+    order_date TIMESTAMP DEFAULT NOW()
+);
+CREATE TABLE customer_log (
+    log_id SERIAL PRIMARY KEY,
+    customer_id INT,
+    action_type VARCHAR(20) DEFAULT 'INSERT',
+    log_time TIMESTAMP DEFAULT NOW(),
+    details TEXT
+);
+
+-- Thêm dữ liệu mẫu để test
+INSERT INTO customers (name) VALUES ('Nguyen Van A');
+INSERT INTO products (name, price, stock) VALUES ('Laptop', 1000, 10);
+-- Chèn 1 đơn hàng ban đầu có quantity > 5
+INSERT INTO orders (customer_id, product_id, quantity, total_amount) VALUES (1, 1, 10, 10000);
+
+BEGIN;	
+SET TRANSACTION ISOLATION LEVEL READ COMMITTED;	
+SELECT COUNT(*) FROM orders WHERE quantity > 5;
+
+INSERT INTO orders (customer_id, product_id, quantity) VALUES (1, 1, 8);
+SELECT COUNT(*) FROM orders WHERE quantity > 5;
+COMMIT;
+SELECT COUNT(*) FROM orders WHERE quantity > 5;
+COMMIT;
+
+--3
+CREATE OR REPLACE FUNCTION log_customer_insert()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO customer_log (customer_id, details)
+    VALUES (NEW.customer_id, 'Đã thêm khách hàng mới: ' || NEW.name);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+CREATE TRIGGER trg_after_insert_customer
+AFTER INSERT ON customers
+FOR EACH ROW
+EXECUTE FUNCTION log_customer_insert();
+
+--4
+INSERT INTO customers (name, email) VALUES ('Tran Van B', 'b@gmail.com');
+INSERT INTO customers (name, email) VALUES ('Le Thi C', 'c@gmail.com');
+SELECT * FROM customer_log;

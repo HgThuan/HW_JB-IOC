@@ -1,0 +1,86 @@
+-- 1. Bảng Khách hàng (Lưu thông tin và số dư ví)
+CREATE TABLE customers (
+    customer_id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100),
+    balance NUMERIC(12, 2) DEFAULT 0 CHECK (balance >= 0)
+);
+
+-- 2. Bảng Sản phẩm (Lưu giá và tồn kho)
+CREATE TABLE products (
+    product_id SERIAL PRIMARY KEY,
+    product_name VARCHAR(100) NOT NULL,
+    stock INT NOT NULL CHECK (stock >= 0),
+    price NUMERIC(10, 2) NOT NULL CHECK (price > 0)
+);
+
+-- 3. Bảng Đơn hàng (Lưu thông tin tổng quát)
+CREATE TABLE orders (
+    order_id SERIAL PRIMARY KEY,
+    customer_name VARCHAR(100), -- Hoặc dùng customer_id REFERENCES customers(customer_id)
+    total_amount NUMERIC(12, 2) DEFAULT 0,
+    status VARCHAR(20) DEFAULT 'PENDING', -- PENDING, COMPLETED, FAILED
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- 4. Bảng Chi tiết đơn hàng (Lưu từng sản phẩm trong một đơn)
+CREATE TABLE order_items (
+    order_item_id SERIAL PRIMARY KEY,
+    order_id INT REFERENCES orders(order_id) ON DELETE CASCADE,
+    product_id INT REFERENCES products(product_id),
+    quantity INT NOT NULL CHECK (quantity > 0),
+    subtotal NUMERIC(12, 2) NOT NULL
+);
+
+-- 5. Bảng Log (Để theo dõi lịch sử thay đổi nếu cần)
+CREATE TABLE employee_log (
+    log_id SERIAL PRIMARY KEY,
+    emp_name VARCHAR(50),
+    action_time TIMESTAMP DEFAULT NOW(),
+    details TEXT
+);
+
+DO $$
+DECLARE
+    v_order_id INT;
+    v_price1 NUMERIC;
+    v_price2 NUMERIC;
+    v_stock1 INT;
+    v_stock2 INT;
+BEGIN
+    -- 1. Lấy thông tin giá và tồn kho (Khóa hàng để đảm bảo chính xác)
+    SELECT price, stock INTO v_price1, v_stock1 FROM products WHERE product_id = 1 FOR UPDATE;
+    SELECT price, stock INTO v_price2, v_stock2 FROM products WHERE product_id = 2 FOR UPDATE;
+
+    -- 2. Kiểm tra điều kiện tồn kho
+    IF v_stock1 < 2 OR v_stock2 < 1 THEN
+        RAISE EXCEPTION 'Một trong hai sản phẩm không đủ hàng trong kho!';
+    END IF;
+
+    -- 3. Tạo đơn hàng mới
+    INSERT INTO orders (customer_name, total_amount)
+    VALUES ('Nguyen Van A', (v_price1 * 2) + (v_price2 * 1))
+    RETURNING order_id INTO v_order_id;
+
+    -- 4. Thêm vào chi tiết đơn hàng và cập nhật tồn kho
+    -- Sản phẩm 1
+    INSERT INTO order_items (order_id, product_id, quantity, subtotal)
+    VALUES (v_order_id, 1, 2, v_price1 * 2);
+    UPDATE products SET stock = stock - 2 WHERE product_id = 1;
+
+    -- Sản phẩm 2
+    INSERT INTO order_items (order_id, product_id, quantity, subtotal)
+    VALUES (v_order_id, 2, 1, v_price2 * 1);
+    UPDATE products SET stock = stock - 1 WHERE product_id = 2;
+
+    RAISE NOTICE 'Giao dịch thành công cho đơn hàng ID: %', v_order_id;
+
+EXCEPTION
+    WHEN OTHERS THEN
+        -- Bất kỳ lỗi nào xảy ra sẽ nhảy vào đây và tự động ROLLBACK
+        RAISE NOTICE 'Giao dịch thất bại: %. Toàn bộ thay đổi đã bị ROLLBACK.', SQLERRM;
+END $$;
+
+-- Đưa tồn kho sản phẩm 2 về 0
+UPDATE products SET stock = 0 WHERE product_id = 2;
+

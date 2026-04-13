@@ -1,0 +1,87 @@
+CREATE TABLE accounts (
+account_id SERIAL PRIMARY KEY, 
+owner_name VARCHAR (100), 
+balance NUMERIC (12, 2), 
+status VARCHAR (10) DEFAULT 'ACTIVE'
+) ;
+CREATE TABLE transactions (
+trans_id SERIAL PRIMARY KEY, 
+from_account INT REFERENCES accounts (account_id), 
+to_account INT REFERENCES accounts (account_id), 
+amount NUMERIC (12, 2), 
+status VARCHAR(20) DEFAULT 'PENDING' created_at TIMESTAMP DEFAULT NOW ()
+) ;
+
+DO $$
+DECLARE
+    sender_id INT := 1;
+    receiver_id INT := 2;
+    transfer_amount NUMERIC := 500.00;
+    sender_status VARCHAR;
+    sender_balance NUMERIC;
+    receiver_status VARCHAR;
+    new_trans_id INT;
+BEGIN
+    -- 1. KHÓA cả tài khoản gửi và nhận để ngăn truy cập song song
+    -- Sắp xếp ID khi khóa để tránh Deadlock (khóa ID nhỏ trước, ID lớn sau)
+    PERFORM * FROM accounts 
+    WHERE account_id IN (sender_id, receiver_id) 
+    ORDER BY account_id 
+    FOR UPDATE;
+
+    -- 2. Lấy thông tin tài khoản gửi
+    SELECT status, balance INTO sender_status, sender_balance 
+    FROM accounts WHERE account_id = sender_id;
+
+    -- 3. Lấy thông tin tài khoản nhận
+    SELECT status INTO receiver_status 
+    FROM accounts WHERE account_id = receiver_id;
+
+    -- 4. KIỂM TRA CÁC ĐIỀU KIỆN
+    -- a. Kiểm tra tài khoản gửi hoạt động
+    IF sender_status != 'ACTIVE' THEN
+        RAISE EXCEPTION 'Tài khoản gửi không hoạt động.';
+    END IF;
+
+    -- b. Kiểm tra tài khoản nhận hoạt động (đảm bảo không bị khóa)
+    IF receiver_status != 'ACTIVE' THEN
+        RAISE EXCEPTION 'Tài khoản nhận bị khóa hoặc không tồn tại.';
+    END IF;
+
+    -- c. Kiểm tra số dư đủ
+    IF sender_balance < transfer_amount THEN
+        RAISE EXCEPTION 'Số dư không đủ để thực hiện giao dịch.';
+    END IF;
+
+    -- 5. THỰC HIỆN CẬP NHẬT
+    -- a. Giảm balance tài khoản gửi
+    UPDATE accounts SET balance = balance - transfer_amount WHERE account_id = sender_id;
+
+    -- b. Tăng balance tài khoản nhận
+    UPDATE accounts SET balance = balance + transfer_amount WHERE account_id = receiver_id;
+
+    -- c. Ghi log vào bảng transactions (trạng thái PENDING)
+    INSERT INTO transactions (from_account, to_account, amount, status)
+    VALUES (sender_id, receiver_id, transfer_amount, 'PENDING')
+    RETURNING trans_id INTO new_trans_id;
+
+    -- 6. CẬP NHẬT TRẠNG THÁI GIAO DỊCH THÀNH COMPLETED
+    UPDATE transactions SET status = 'COMPLETED' WHERE trans_id = new_trans_id;
+
+    RAISE NOTICE 'Giao dịch thành công! Đã chuyển % từ ID % sang ID %', transfer_amount, sender_id, receiver_id;
+
+EXCEPTION
+    WHEN OTHERS THEN
+        -- PostgreSQL tự động ROLLBACK khi có EXCEPTION trong khối DO
+        RAISE NOTICE 'GIAO DỊCH THẤT BẠI: %. Toàn bộ thay đổi đã được ROLLBACK.', SQLERRM;
+END $$;
+
+-- Thêm dữ liệu mẫu
+INSERT INTO accounts (owner_name, balance, status) VALUES ('Nguyen Van A', 1000.00, 'ACTIVE');
+INSERT INTO accounts (owner_name, balance, status) VALUES ('Tran Thi B', 200.00, 'ACTIVE');
+
+UPDATE accounts SET status = 'LOCKED' WHERE account_id = 2;
+
+-- Kiểm tra lại để xác nhận không có thay đổi nào được lưu
+SELECT * FROM accounts;
+SELECT * FROM transactions;

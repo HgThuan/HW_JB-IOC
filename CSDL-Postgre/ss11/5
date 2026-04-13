@@ -1,0 +1,95 @@
+CREATE TABLE customers (
+    customer_id SERIAL PRIMARY KEY,
+    name VARCHAR(50) NOT NULL,
+    email VARCHAR(50),
+    balance NUMERIC(12,2) DEFAULT 0
+);
+
+CREATE TABLE products (
+    product_id SERIAL PRIMARY KEY,
+    name VARCHAR(50) NOT NULL,
+    price NUMERIC(10,2) NOT NULL,
+    stock INT NOT NULL
+);
+
+CREATE TABLE orders (
+    order_id SERIAL PRIMARY KEY,
+    customer_id INT REFERENCES customers(customer_id),
+    total_amount NUMERIC(12,2) DEFAULT 0,
+    status VARCHAR(20) DEFAULT 'PENDING',
+    order_date TIMESTAMP DEFAULT NOW()
+);
+
+-- Bảng chi tiết đơn hàng (để lưu nhiều sản phẩm)
+CREATE TABLE order_items (
+    item_id SERIAL PRIMARY KEY,
+    order_id INT REFERENCES orders(order_id),
+    product_id INT REFERENCES products(product_id),
+    quantity INT NOT NULL,
+    price_at_time NUMERIC(10,2)
+);
+
+-- Thêm dữ liệu mẫu
+INSERT INTO customers (name, balance) VALUES ('Tran Thi B', 5000.00);
+INSERT INTO products (name, price, stock) VALUES ('Laptop', 1000.00, 10), ('Mouse', 50.00, 20), ('Keyboard', 150.00, 5);
+
+DO $$
+DECLARE
+    v_cust_id INT := 1; -- ID của Tran Thi B
+    v_order_id INT;
+    v_total NUMERIC := 0;
+    v_item_price NUMERIC;
+    v_cust_balance NUMERIC;
+BEGIN
+    -- 1. Tạo đơn hàng mới (Trạng thái PENDING)
+    INSERT INTO orders (customer_id, status) VALUES (v_cust_id, 'PENDING')
+    RETURNING order_id INTO v_order_id;
+
+    -- THIẾT LẬP SAVEPOINT: Sau khi đã tạo đơn hàng
+    SAVEPOINT sp_after_order_created;
+
+    BEGIN
+        -- 2. Thêm sản phẩm 1 (product_id=1, quantity=1)
+        SELECT price INTO v_item_price FROM products WHERE product_id = 1 AND stock >= 1;
+        IF NOT FOUND THEN RAISE EXCEPTION 'Sản phẩm 1 hết hàng'; END IF;
+        
+        INSERT INTO order_items (order_id, product_id, quantity, price_at_time)
+        VALUES (v_order_id, 1, 1, v_item_price);
+        UPDATE products SET stock = stock - 1 WHERE product_id = 1;
+        v_total := v_total + (v_item_price * 1);
+
+        -- 3. Thêm sản phẩm 2 (product_id=3, quantity=2)
+        SELECT price INTO v_item_price FROM products WHERE product_id = 3 AND stock >= 2;
+        IF NOT FOUND THEN RAISE EXCEPTION 'Sản phẩm 3 hết hàng'; END IF;
+
+        INSERT INTO order_items (order_id, product_id, quantity, price_at_time)
+        VALUES (v_order_id, 3, 2, v_item_price);
+        UPDATE products SET stock = stock - 2 WHERE product_id = 3;
+        v_total := v_total + (v_item_price * 2);
+
+        -- 4. Kiểm tra số dư và trừ tiền
+        SELECT balance INTO v_cust_balance FROM customers WHERE customer_id = v_cust_id FOR UPDATE;
+        IF v_cust_balance < v_total THEN RAISE EXCEPTION 'Không đủ tiền trong ví'; END IF;
+
+        UPDATE customers SET balance = balance - v_total WHERE customer_id = v_cust_id;
+        UPDATE orders SET total_amount = v_total, status = 'COMPLETED' WHERE order_id = v_order_id;
+
+        RAISE NOTICE 'Đơn hàng hoàn tất! Tổng tiền: %', v_total;
+
+    EXCEPTION WHEN OTHERS THEN
+        -- Nếu có lỗi ở bước thêm item hoặc trừ tiền -> Quay về lúc vừa tạo Order xong
+        RAISE NOTICE 'Lỗi xảy ra: %. Thực hiện Rollback về Savepoint.', SQLERRM;
+        ROLLBACK TO SAVEPOINT sp_after_order_created;
+        UPDATE orders SET status = 'FAILED' WHERE order_id = v_order_id;
+    END;
+
+    -- Giải phóng Savepoint và kết thúc
+    RELEASE SAVEPOINT sp_after_order_created;
+END $$;
+
+
+UPDATE products SET stock = 0 WHERE product_id = 3; -- Giả sử Keyboard hết hàng
+
+SELECT * FROM orders;      -- Sẽ thấy đơn hàng trạng thái FAILED
+SELECT * FROM order_items; -- Sẽ trống (vì đã rollback phần chi tiết)
+SELECT balance FROM customers WHERE name = 'Tran Thi B'; -- Tiền vẫn nguyên vẹn
