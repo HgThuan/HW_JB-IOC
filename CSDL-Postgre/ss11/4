@@ -1,0 +1,74 @@
+-- Tạo bảng tài khoản
+CREATE TABLE accounts (
+    account_id SERIAL PRIMARY KEY,
+    customer_name VARCHAR(100),
+    balance NUMERIC(12,2)
+);
+
+-- Tạo bảng lịch sử giao dịch
+CREATE TABLE transactions (
+    trans_id SERIAL PRIMARY KEY,
+    account_id INT REFERENCES accounts(account_id),
+    amount NUMERIC(12,2),
+    trans_type VARCHAR(20), -- 'WITHDRAW' hoặc 'DEPOSIT'
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Thêm dữ liệu mẫu
+INSERT INTO accounts (customer_name, balance) VALUES ('Nguyen Van A', 1000.00);
+
+DO $$
+DECLARE
+    v_account_id INT := 1;
+    v_withdraw_amount NUMERIC := 200.00;
+    v_current_balance NUMERIC;
+BEGIN
+    -- b. Kiểm tra balance của tài khoản (Khóa dòng để tránh tranh chấp)
+    SELECT balance INTO v_current_balance 
+    FROM accounts WHERE account_id = v_account_id FOR UPDATE;
+
+    IF v_current_balance >= v_withdraw_amount THEN
+        -- c. Trừ số dư
+        UPDATE accounts 
+        SET balance = balance - v_withdraw_amount 
+        WHERE account_id = v_account_id;
+
+        -- c. Ghi vào bảng transactions
+        INSERT INTO transactions (account_id, amount, trans_type)
+        VALUES (v_account_id, v_withdraw_amount, 'WITHDRAW');
+
+        RAISE NOTICE 'Rút tiền thành công. Giao dịch đang được COMMIT.';
+    ELSE
+        -- d. Nếu không đủ tiền -> ROLLBACK
+        RAISE EXCEPTION 'Số dư không đủ! Giao dịch sẽ ROLLBACK.';
+    END IF;
+
+EXCEPTION
+    WHEN OTHERS THEN
+        -- d. Nếu bất kỳ bước nào thất bại (lỗi code hoặc RAISE EXCEPTION)
+        RAISE NOTICE 'Đã xảy ra lỗi: %. Toàn bộ thay đổi bị hủy (ROLLBACK).', SQLERRM;
+END $$;
+
+DO $$
+BEGIN
+    -- Bước 1: Trừ tiền (Giả sử tài khoản 1 đang có 1000, trừ 500 còn 500)
+    UPDATE accounts SET balance = balance - 500 WHERE account_id = 1;
+
+    -- Bước 2: Cố tình chèn sai account_id để gây lỗi
+    INSERT INTO transactions (account_id, amount, trans_type)
+    VALUES (999, 500, 'WITHDRAW'); -- Lỗi chắc chắn xảy ra ở đây
+
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE NOTICE 'Phát hiện lỗi chèn log: %. Đang Rollback...', SQLERRM;
+END $$;
+
+SELECT * FROM accounts WHERE account_id = 1;
+
+-- Tổng số tiền rút trong log phải khớp với số dư bị hụt đi từ mốc ban đầu
+SELECT 
+    a.customer_name, 
+    a.balance AS current_balance,
+    (SELECT SUM(amount) FROM transactions WHERE account_id = a.account_id AND trans_type = 'WITHDRAW') AS total_withdrawn
+FROM accounts a;
+

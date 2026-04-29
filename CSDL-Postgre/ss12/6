@@ -1,0 +1,41 @@
+CREATE TABLE accounts (
+    account_id SERIAL PRIMARY KEY,
+    account_name VARCHAR(100),
+    balance NUMERIC(15, 2) CHECK (balance >= 0) -- Thêm check để tránh số dư âm ở mức bảng
+);
+
+INSERT INTO accounts (account_name, balance) VALUES ('Nguyen Van A', 1000.00);
+INSERT INTO accounts (account_name, balance) VALUES ('Tran Thi B', 500.00);
+
+DO $$
+DECLARE
+    source_id INT := 1;      -- ID tài khoản gửi (A)
+    dest_id INT := 2;        -- ID tài khoản nhận (B)
+    amount NUMERIC := 1200;  -- Số tiền muốn chuyển
+    current_balance NUMERIC;
+BEGIN
+    -- a. Kiểm tra số dư tài khoản gửi
+    SELECT balance INTO current_balance FROM accounts WHERE account_id = source_id;
+
+    RAISE NOTICE 'Đang thực hiện chuyển % từ TK % (Số dư hiện tại: %)', amount, source_id, current_balance;
+
+    -- b & c. Logic kiểm tra
+    IF current_balance >= amount THEN
+        -- Trừ tiền tài khoản gửi
+        UPDATE accounts SET balance = balance - amount WHERE account_id = source_id;
+        -- Cộng tiền tài khoản nhận
+        UPDATE accounts SET balance = balance + amount WHERE account_id = dest_id;
+        
+        RAISE NOTICE 'Giao dịch thành công. Đang COMMIT...';
+        -- Trong khối DO của Postgres, mặc định là một transaction. 
+        -- Nếu chạy hết mà không có lỗi, nó sẽ tự động COMMIT.
+    ELSE
+        -- Nếu không đủ tiền, chủ động báo lỗi để hệ thống ROLLBACK
+        RAISE EXCEPTION 'Số dư không đủ! Giao dịch sẽ ROLLBACK. (Thiếu %)', (amount - current_balance);
+    END IF;
+
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE NOTICE 'Đã xảy ra lỗi: %. Giao dịch đã được hủy bỏ.', SQLERRM;
+END $$;
+
